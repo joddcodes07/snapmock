@@ -2,6 +2,7 @@
 'use strict';
 
 const { version } = require('../src');
+const { run } = require('../src/cli');
 
 const help = `Usage: snapmock --db <file> [options]
 
@@ -28,6 +29,8 @@ if (args.includes('--help') || args.includes('-h')) {
   console.log(version);
   process.exitCode = 0;
 } else {
-  console.error('SnapMock is not configured yet. Run snapmock --help for usage.');
-  process.exitCode = 1;
+  run(args).catch((error) => {
+    console.error(`Error: ${error.message}`);
+    process.exitCode = 1;
+  });
 }
