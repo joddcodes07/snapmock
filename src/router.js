@@ -3,13 +3,14 @@
 const { DatabaseError } = require('./database');
 const { parseJsonBody, sendJson } = require('./middleware');
 
-function createRouter(database) {
+function createRouter(database, { beforeRequest } = {}) {
   return async function route(request, response) {
     try {
       if (request.method === 'OPTIONS') {
         response.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type' });
         return response.end();
       }
+      if (beforeRequest && await beforeRequest(request, response)) return;
 
       const url = new URL(request.url, 'http://localhost');
       const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);

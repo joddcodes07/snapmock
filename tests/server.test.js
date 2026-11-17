@@ -7,11 +7,11 @@ const { tmpdir } = require('node:os');
 const path = require('node:path');
 const { close, createSnapMockServer, listen } = require('../src/server');
 
-async function start() {
+async function start(options = {}) {
   const directory = await mkdtemp(path.join(tmpdir(), 'snapmock-server-'));
   const dbPath = path.join(directory, 'db.json');
   await writeFile(dbPath, '{"movies":[{"id":1,"title":"Arrival","genre":"Sci-Fi"}]}');
-  const { server } = await createSnapMockServer({ dbPath });
+  const { server } = await createSnapMockServer({ dbPath, ...options });
   const address = await listen(server, 0);
   return { server, url: `http://127.0.0.1:${address.port}` };
 }
@@ -29,6 +29,26 @@ test('provides automatic CRUD endpoints with expected status codes', async (t) =
   assert.deepEqual(await patched.json(), { id: 2, title: 'Dune', genre: 'Sci-Fi' });
   const deleted = await fetch(`${app.url}/movies/2`, { method: 'DELETE' });
   assert.equal(deleted.status, 204);
+});
+
+test('simulates named scenarios and error rates', async (t) => {
+  const unauthorized = await start({ scenario: 'unauthorized' });
+  const errors = await start({ errorRate: 100 });
+  t.after(() => Promise.all([close(unauthorized.server), close(errors.server)]));
+  assert.equal((await fetch(`${unauthorized.url}/movies`)).status, 401);
+  assert.equal((await fetch(`${errors.url}/movies`)).status, 500);
+});
+
+test('delays responses by the configured duration', async (t) => {
+  const app = await start({ delay: 25 });
+  t.after(() => close(app.server));
+  const startedAt = Date.now();
+  assert.equal((await fetch(`${app.url}/movies`)).status, 200);
+  assert.ok(Date.now() - startedAt >= 20);
+});
+
+test('validates simulation options', async () => {
+  await assert.rejects(createSnapMockServer({ dbPath: '/missing', scenario: 'unknown' }), /Unknown scenario/);
 });
 
 test('handles missing resources, invalid bodies, and unsupported methods', async (t) => {
