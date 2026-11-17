@@ -1,0 +1,9 @@
+{
+  "movies": [
+    { "id": 1, "title": "Interstellar", "genre": "Sci-Fi", "year": 2014 },
+    { "id": 2, "title": "Inception", "genre": "Thriller", "year": 2010 }
+  ],
+  "users": [
+    { "id": 1, "name": "John Carter", "email": "john@example.com" }
+  ]
+}
