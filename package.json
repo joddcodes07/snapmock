@@ -1,0 +1,41 @@
+{
+  "name": "snapmock",
+  "version": "0.1.0",
+  "description": "A lightweight, configuration-driven mock REST API server.",
+  "main": "src/index.js",
+  "exports": "./src/index.js",
+  "bin": {
+    "snapmock": "bin/snapmock.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "start": "node bin/snapmock.js",
+    "pack:check": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joddcodes07/snapmock.git"
+  },
+  "bugs": {
+    "url": "https://github.com/joddcodes07/snapmock/issues"
+  },
+  "homepage": "https://github.com/joddcodes07/snapmock#readme",
+  "keywords": [
+    "mock-api",
+    "rest-api",
+    "json-server",
+    "testing",
+    "frontend"
+  ],
+  "license": "MIT"
+}
