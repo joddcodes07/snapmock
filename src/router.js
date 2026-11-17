@@ -26,12 +26,48 @@ function createRouter(database) {
 }
 
 async function collectionRoute(request, response, database, collection) {
-  if (request.method === 'GET') return sendJson(response, 200, database.getCollection(collection));
+  if (request.method === 'GET') {
+    const url = new URL(request.url, 'http://localhost');
+    const result = queryCollection(database.getCollection(collection), url.searchParams);
+    return sendJson(response, 200, result.records, result.headers);
+  }
   if (request.method === 'POST') {
     const created = await database.create(collection, await parseJsonBody(request));
     return sendJson(response, 201, created, { location: `/${encodeURIComponent(collection)}/${encodeURIComponent(created.id)}` });
   }
   return methodNotAllowed(response, 'GET, POST');
+}
+
+function queryCollection(records, params) {
+  const pageValue = params.get('_page');
+  const limitValue = params.get('_limit');
+  const page = pageValue === null ? null : Number(pageValue);
+  const limit = limitValue === null ? null : Number(limitValue);
+  if ((page !== null && (!Number.isInteger(page) || page < 1)) || (limit !== null && (!Number.isInteger(limit) || limit < 1))) {
+    const error = new Error('Pagination values must be positive integers.');
+    error.code = 'INVALID_QUERY';
+    throw error;
+  }
+
+  let result = records;
+  for (const [key, value] of params) {
+    if (key === '_page' || key === '_limit' || key === 'q') continue;
+    result = result.filter((record) => String(record[key]) === value);
+  }
+  const search = params.get('q');
+  if (search) {
+    const needle = search.toLowerCase();
+    result = result.filter((record) => Object.values(record).some((value) => typeof value === 'string' && value.toLowerCase().includes(needle)));
+  }
+
+  const total = result.length;
+  if (page !== null || limit !== null) {
+    const effectiveLimit = limit || 10;
+    const effectivePage = page || 1;
+    result = result.slice((effectivePage - 1) * effectiveLimit, effectivePage * effectiveLimit);
+    return { records: result, headers: { 'x-total-count': String(total), 'x-page': String(effectivePage), 'x-limit': String(effectiveLimit), 'x-total-pages': String(Math.ceil(total / effectiveLimit)) } };
+  }
+  return { records: result, headers: { 'x-total-count': String(total) } };
 }
 
 async function recordRoute(request, response, database, collection, id) {
@@ -65,10 +101,10 @@ function handleError(response, error) {
     const status = error.code === 'COLLECTION_NOT_FOUND' ? 404 : 400;
     return sendJson(response, status, { error: error.message });
   }
-  if (error.code === 'BODY_TOO_LARGE' || error.code === 'INVALID_JSON_BODY') {
+  if (error.code === 'BODY_TOO_LARGE' || error.code === 'INVALID_JSON_BODY' || error.code === 'INVALID_QUERY') {
     return sendJson(response, 400, { error: error.message });
   }
   return sendJson(response, 500, { error: 'Unexpected server error.' });
 }
 
-module.exports = { createRouter };
+module.exports = { createRouter, queryCollection };

@@ -41,3 +41,15 @@ test('handles missing resources, invalid bodies, and unsupported methods', async
   assert.equal(unsupported.status, 405);
   assert.equal(unsupported.headers.get('allow'), 'GET, POST');
 });
+
+test('filters, searches, and paginates collections', async (t) => {
+  const app = await start();
+  t.after(() => close(app.server));
+  await fetch(`${app.url}/movies`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"title":"Interstellar","genre":"Sci-Fi"}' });
+  await fetch(`${app.url}/movies`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"title":"Alien","genre":"Horror"}' });
+  const filtered = await fetch(`${app.url}/movies?genre=Sci-Fi&q=stellar&_page=1&_limit=1`);
+  assert.equal(filtered.headers.get('x-total-count'), '1');
+  assert.equal(filtered.headers.get('x-total-pages'), '1');
+  assert.deepEqual(await filtered.json(), [{ id: 2, title: 'Interstellar', genre: 'Sci-Fi' }]);
+  assert.equal((await fetch(`${app.url}/movies?_page=zero`)).status, 400);
+});
